@@ -1,16 +1,18 @@
 # Adaptive Search API 🔍
 
-A production-ready, free, and open-source semantic search API that **beats commercial solutions like Exa** using only free data sources.
+A production-ready, free, and open-source semantic search API that delivers high-quality results using only free data sources.
 
 ## 🎯 Performance
 
-| Benchmark | Adaptive Search | Exa | Status |
-|-----------|----------------|-----|--------|
-| **MS Marco** | **0.7458** | 0.7200 | **+3.6% 🎉** |
-| **SimpleQA** | 0.6037 | 0.7000 | -13.8% |
-| **Overall** | **0.7032** | 0.7140 | **-1.5%** |
+Evaluated using the methodology described at [Exa's evaluation blog](https://exa.ai/blog/evals-at-exa):
 
-**Key Achievement:** Beats Exa on MS Marco (700 queries) while using 100% free sources!
+| Benchmark | Score | Dataset Size |
+|-----------|-------|--------------|
+| **MS Marco** | **0.7458** | 700 queries |
+| **SimpleQA** | 0.6037 | 300 queries |
+| **Overall** | **0.7032** | 1000 queries (weighted) |
+
+**Key Achievement:** Strong performance across diverse query types while using 100% free data sources!
 
 ## ✨ Features
 
@@ -164,12 +166,23 @@ RATE_LIMIT_PER_MINUTE=60
 
 ## 📊 Benchmarking
 
-Run benchmarks to verify performance:
+Want to run evaluations yourself? Use our Colab-ready evaluation script:
 
 ```bash
-python benchmark.py --dataset msmarco --queries 100
-python benchmark.py --dataset simpleqa --queries 100
+# Edit the configuration at the top of the file:
+# - Set your OpenAI API key
+# - Set MS_MARCO_SAMPLES (max 700)
+# - Set SIMPLEQA_SAMPLES (max 300)
+
+python colab_evaluation.py
 ```
+
+The script will:
+1. Run searches on your selected sample size
+2. Evaluate results using GPT-4o (same methodology as our benchmarks)
+3. Generate a detailed results file with scores
+
+Perfect for testing on Google Colab or your local machine!
 
 ## 🤝 Contributing
 
