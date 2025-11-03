@@ -18,7 +18,7 @@ Evaluated using the methodology described at [Exa's evaluation blog](https://exa
 
 ## ✨ Features
 
-- **100% Free** - No API keys required (except OpenAI for query expansion)
+- **100% Free** - No API keys required
 - **Semantic Search** - Uses sentence transformers for understanding
 - **Multi-Source** - Combines DuckDuckGo, Wikipedia, and Wikidata
 - **Ensemble Scoring** - 7 different signals for ranking
