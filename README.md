@@ -14,6 +14,8 @@ Evaluated using the methodology described at [Exa's evaluation blog](https://exa
 
 **Key Achievement:** Strong performance across diverse query types while using 100% free data sources!
 
+📊 **Full benchmark results:** See [benchmark_results_v4.3.json](./benchmark_results_v4.3.json) for complete evaluation data including per-query scores and performance breakdowns.
+
 ## ✨ Features
 
 - **100% Free** - No API keys required (except OpenAI for query expansion)
