@@ -1,4 +1,4 @@
-# Adaptive Search API 🔍
+# Athena 🔍
 
 A production-ready, free, and open-source semantic search API that delivers high-quality results using only free data sources.
 
@@ -205,12 +205,3 @@ MIT License - see [LICENSE](LICENSE)
 This project was inspired by the need for accessible, high-quality search that doesn't require expensive API subscriptions.
 
 ![Inspiration](./inspiration.png)
-
-## 📮 Contact
-
-- Issues: [GitHub Issues](https://github.com/sambhavnoobcoder/Athena/issues)
-- Email: indosambhav@gmail.com
-
----
-
-**Made with ❤️ for the open-source community**
