@@ -198,10 +198,16 @@ MIT License - see [LICENSE](LICENSE)
 - Uses sentence-transformers for semantic understanding
 - Inspired by research on multi-source search and ensemble ranking
 
+## 🎨 Inspiration
+
+This project was inspired by the need for accessible, high-quality search that doesn't require expensive API subscriptions.
+
+![Inspiration](./inspiration.png)
+
 ## 📮 Contact
 
-- Issues: [GitHub Issues](https://github.com/yourusername/adaptive-search-api/issues)
-- Email: your.email@example.com
+- Issues: [GitHub Issues](https://github.com/sambhavnoobcoder/Athena/issues)
+- Email: indosambhav@gmail.com
 
 ---
 
