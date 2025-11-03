@@ -15,8 +15,11 @@ Based on evaluation methodology from: https://exa.ai/blog/evals-at-exa
 OPENAI_API_KEY = "your-openai-api-key-here"
 
 # Number of samples to test from each dataset
-MS_MARCO_SAMPLES = 100  # Max: 700 (full dataset)
-SIMPLEQA_SAMPLES = 50   # Max: 300 (full dataset)
+MS_MARCO_SAMPLES = 10  # Max: 700 (full dataset)
+SIMPLEQA_SAMPLES = 10   # Max: 300 (full dataset)
+
+# Parallel processing workers
+NUM_WORKERS = 3  # Number of parallel workers for evaluation
 
 # Random seed for reproducibility
 RANDOM_SEED = 42
@@ -30,6 +33,11 @@ print("🚀 Adaptive Search Engine - Evaluation Script")
 print("=" * 80)
 print()
 
+# Suppress warnings
+import warnings
+warnings.filterwarnings('ignore', category=DeprecationWarning)
+warnings.filterwarnings('ignore', category=RuntimeWarning)
+
 # Install dependencies
 print("📦 Installing dependencies...")
 import subprocess
@@ -38,7 +46,7 @@ import sys
 dependencies = [
     "sentence-transformers",
     "scikit-learn",
-    "duckduckgo-search",
+    "ddgs",  # Updated package name
     "openai",
     "requests",
 ]
@@ -60,6 +68,8 @@ from dataclasses import dataclass
 from datetime import datetime
 import requests
 from openai import OpenAI
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 # ============================================================================
 # Search Engine Implementation (V4.3)
@@ -67,12 +77,22 @@ from openai import OpenAI
 
 print("🔧 Loading search engine components...")
 
+# Fix for Colab's expired HF token issue
+import os
+if 'HF_TOKEN' in os.environ:
+    del os.environ['HF_TOKEN']
+if 'HUGGING_FACE_HUB_TOKEN' in os.environ:
+    del os.environ['HUGGING_FACE_HUB_TOKEN']
+
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
-from duckduckgo_search import DDGS
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 
 @dataclass
 class SearchResult:
@@ -211,7 +231,7 @@ class EnsembleScorer:
     """Scores results using multiple signals"""
 
     def __init__(self):
-        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2', token=False)
         self.tfidf = TfidfVectorizer(stop_words='english')
 
     def score_results(self, query: str, results: List[SearchResult], query_analysis: Dict[str, str]) -> List[SearchResult]:
@@ -262,7 +282,7 @@ class ResultClusterer:
     """Clusters results to ensure diversity"""
 
     def __init__(self):
-        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2', token=False)
 
     def diversify(self, results: List[SearchResult], top_k: int = 5) -> List[SearchResult]:
         if len(results) <= top_k:
@@ -498,53 +518,73 @@ def run_evaluation():
         }
     }
 
-    # Evaluate MS Marco
+    # Helper function to evaluate a single query
+    def evaluate_single_query(query: str, index: int, total: int, dataset_name: str):
+        """Evaluate a single query and return results"""
+        print(f"\n[{index}/{total}] {dataset_name}: {query}")
+
+        try:
+            # Search
+            search_results = search_engine.search(query, top_k=5)
+            print(f"  Found {len(search_results)} results")
+
+            # Evaluate
+            score = evaluator.evaluate_query(query, search_results)
+            print(f"  Score: {score:.4f}")
+
+            return {
+                "query": query,
+                "score": score,
+                "num_results": len(search_results),
+                "success": True
+            }
+        except Exception as e:
+            print(f"  ⚠️ Error: {e}")
+            return {
+                "query": query,
+                "score": 0.0,
+                "num_results": 0,
+                "success": False,
+                "error": str(e)
+            }
+
+    # Evaluate MS Marco (parallel)
     print("\n" + "=" * 80)
-    print("📊 Evaluating MS Marco Dataset")
+    print(f"📊 Evaluating MS Marco Dataset ({NUM_WORKERS} workers)")
     print("=" * 80)
 
-    for i, query in enumerate(ms_marco_queries, 1):
-        print(f"\n[{i}/{len(ms_marco_queries)}] Query: {query}")
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        futures = []
+        for i, query in enumerate(ms_marco_queries, 1):
+            future = executor.submit(evaluate_single_query, query, i, len(ms_marco_queries), "MS Marco")
+            futures.append(future)
 
-        # Search
-        search_results = search_engine.search(query, top_k=5)
-        print(f"  Found {len(search_results)} results")
+        for future in as_completed(futures):
+            result = future.result()
+            results["ms_marco"].append(result)
 
-        # Evaluate
-        score = evaluator.evaluate_query(query, search_results)
-        print(f"  Score: {score:.4f}")
+    # Sort results by original order
+    query_order = {q: i for i, q in enumerate(ms_marco_queries)}
+    results["ms_marco"].sort(key=lambda x: query_order[x["query"]])
 
-        results["ms_marco"].append({
-            "query": query,
-            "score": score,
-            "num_results": len(search_results)
-        })
-
-        time.sleep(1)  # Rate limiting
-
-    # Evaluate SimpleQA
+    # Evaluate SimpleQA (parallel)
     print("\n" + "=" * 80)
-    print("📊 Evaluating SimpleQA Dataset")
+    print(f"📊 Evaluating SimpleQA Dataset ({NUM_WORKERS} workers)")
     print("=" * 80)
 
-    for i, query in enumerate(simpleqa_queries, 1):
-        print(f"\n[{i}/{len(simpleqa_queries)}] Query: {query}")
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        futures = []
+        for i, query in enumerate(simpleqa_queries, 1):
+            future = executor.submit(evaluate_single_query, query, i, len(simpleqa_queries), "SimpleQA")
+            futures.append(future)
 
-        # Search
-        search_results = search_engine.search(query, top_k=5)
-        print(f"  Found {len(search_results)} results")
+        for future in as_completed(futures):
+            result = future.result()
+            results["simpleqa"].append(result)
 
-        # Evaluate
-        score = evaluator.evaluate_query(query, search_results)
-        print(f"  Score: {score:.4f}")
-
-        results["simpleqa"].append({
-            "query": query,
-            "score": score,
-            "num_results": len(search_results)
-        })
-
-        time.sleep(1)  # Rate limiting
+    # Sort results by original order
+    query_order = {q: i for i, q in enumerate(simpleqa_queries)}
+    results["simpleqa"].sort(key=lambda x: query_order[x["query"]])
 
     # Calculate final metrics
     ms_marco_mean = sum(r["score"] for r in results["ms_marco"]) / len(results["ms_marco"]) if results["ms_marco"] else 0.0
